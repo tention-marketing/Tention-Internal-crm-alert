@@ -24,6 +24,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers, // needed for nicknames
   ],
 });
 
@@ -41,8 +42,36 @@ function extractField(lines, field) {
     l.toLowerCase().startsWith(field.toLowerCase())
   );
   if (!line) return null;
-
   return line.split(":").slice(1).join(":").trim();
+}
+
+/**
+ * ✅ Resolves Discord mentions to a clean display name
+ * - Uses server nickname first
+ * - Removes "@"
+ * - Safe fallbacks
+ */
+function resolveESName(value, message) {
+  if (!value) return null;
+
+  let name = value;
+
+  // Replace Discord mention with display name
+  name = name.replace(/<@!?(\d+)>/g, (_, id) => {
+    const member = message.guild.members.cache.get(id);
+    if (!member) return "";
+
+    return (
+      member.displayName ||        // Server nickname
+      member.user.globalName ||    // Discord display name
+      member.user.username
+    );
+  });
+
+  // Remove leading @ if user typed "@Taiwo"
+  name = name.replace(/^@/, "").trim();
+
+  return name || null;
 }
 
 /* ================= LISTENER ================ */
@@ -50,11 +79,13 @@ client.on("messageCreate", async (message) => {
   try {
     if (message.author.bot) return;
     if (message.channel.id !== WATCH_CHANNEL_ID) return;
-    if (!message.content.startsWith("New Client Alert!")) return;
+
+    // Case-insensitive detection
+    if (!message.content.toLowerCase().startsWith("new client alert")) return;
 
     const lines = message.content
       .split("\n")
-      .map((l) => l.trim())
+      .map((l) => l.replace(/\s+/g, " ").trim())
       .filter(Boolean);
 
     const payload = {
@@ -63,15 +94,14 @@ client.on("messageCreate", async (message) => {
       website: extractField(lines, "Website"),
       intakeForm: extractField(lines, "Intake Form"),
       onboardingDoc: extractField(lines, "Onboarding Doc"),
-      esAssigned: extractField(lines, "ES Assigned"),
+      esAssigned: resolveESName(extractField(lines, "ES Assigned"), message),
       contactPerson: extractField(lines, "Contact Person"),
       servicePackage: extractField(lines, "Service Package"),
       timezone: extractField(lines, "Timezone"),
       leadES: extractField(lines, "Lead ES"),
       channelSource: extractField(lines, "Channel"),
       signupPlatform: extractField(lines, "Signup Platform"),
-      feedbackloop: extractField(lines, "Feedback Loop"),
-
+      feedbackLoop: extractField(lines, "Feedback Loop"),
 
       discord: {
         channelId: message.channel.id,
@@ -84,7 +114,7 @@ client.on("messageCreate", async (message) => {
     };
 
     await axios.post(WEBHOOK_URL, payload);
-    console.log(`✅ Sent alert for ${payload.name}`);
+    console.log(`✅ Sent alert for ${payload.clientName}`);
   } catch (error) {
     console.error("❌ Failed to send webhook", {
       message: error.message,
