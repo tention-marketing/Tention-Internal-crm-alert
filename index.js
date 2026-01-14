@@ -98,7 +98,7 @@ client.on("messageCreate", async (message) => {
       contactPerson: extractField(lines, "Contact Person"),
       servicePackage: extractField(lines, "Service Package"),
       timezone: extractField(lines, "Timezone"),
-      leadES: extractField(lines, "Lead ES"),
+      leadES: resolveESName(extractField(lines, "Lead ES"), message),
       channelSource: extractField(lines, "Channel"),
       signupPlatform: extractField(lines, "Signup Platform"),
       feedbackLoop: extractField(lines, "Feedback Loop"),
