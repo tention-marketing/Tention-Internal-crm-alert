@@ -3,7 +3,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import axios from "axios";
 
 /* ================= CONFIG ================= */
-const WATCH_CHANNEL_ID = "1456326124412862575";
+const WATCH_CHANNEL_ID = "1291072546250166303";
 const WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
